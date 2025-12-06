@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DashCord - QR Code Generator</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -229,19 +229,29 @@
         .qr-container {
             display: flex;
             justify-content: center;
+            align-items: center;
             margin-bottom: 16px;
-            padding: 20px;
-            background: #f9f9f9;
+            padding: 30px;
+            background: #ffffff;
             border-radius: 8px;
+            min-height: 500px;
         }
 
         #qrcode {
             display: flex;
             justify-content: center;
+            align-items: center;
+            width: 100%;
         }
 
         #qrcode canvas {
             border-radius: 8px;
+            border: 15px solid white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            max-width: 100%;
+            height: auto;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
         }
 
         .qr-instruction {
@@ -438,7 +448,7 @@
 
         // Wait for QRCode library to load
         function waitForQRCode(callback, maxAttempts = 50) {
-            if (typeof QRCode !== 'undefined') {
+            if (typeof qrcode !== 'undefined') {
                 console.log('QRCode library loaded');
                 callback();
             } else if (maxAttempts > 0) {
@@ -529,17 +539,31 @@
                     // Clear container
                     container.innerHTML = '';
                     
-                    // Create QR code with basic settings - lowest error correction for max capacity
-                    qrCodeInstance = new QRCode(container, {
-                        text: data,
-                        width: 256,
-                        height: 256,
-                        colorDark: '#000000',
-                        colorLight: '#ffffff',
-                        correctLevel: QRCode.CorrectLevel.L
-                    });
-
+                    console.log('Generating QR code - Data Length:', data.length);
+                    
+                    // Use qrcode-generator library
+                    // TypeNumber 0 = auto-detect, 'L' = lowest error correction for max capacity
+                    var qr = qrcode(0, 'L');
+                    qr.addData(data, 'Byte'); // Use Byte mode for UTF-8 support
+                    qr.make();
+                    
+                    // Create image element
+                    var imgTag = qr.createImgTag(8, 16); // cellSize=8, margin=16 pixels
+                    container.innerHTML = imgTag;
+                    
+                    // Style the generated image
+                    var img = container.querySelector('img');
+                    if (img) {
+                        img.style.display = 'block';
+                        img.style.margin = '0 auto';
+                        img.style.maxWidth = '100%';
+                        img.style.height = 'auto';
+                        img.style.imageRendering = 'pixelated';
+                        img.alt = 'QR Code';
+                    }
+                    
                     console.log('QR code generated successfully!');
+                    qrCodeInstance = qr;
                     
                     // Show success message and QR section
                     successMsg.classList.add('show');
@@ -548,11 +572,13 @@
                     // Scroll to QR code section
                     setTimeout(() => {
                         qrSect.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    }, 100);
+                    }, 200);
                     
                 } catch (err) {
                     console.error('QR generation error:', err);
-                    container.innerHTML = '<p style="color: red; text-align: center; padding: 20px; direction: rtl;">خطأ: ' + err.message + '</p>';
+                    console.error('Error stack:', err.stack);
+                    container.innerHTML = '<p style="color: red; text-align: center; padding: 20px; direction: rtl;">خطأ في إنشاء QR code: ' + err.message + '</p>';
+                    alert('خطأ: ' + err.message);
                 }
             }
         }
