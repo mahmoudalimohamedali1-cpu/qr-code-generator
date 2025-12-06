@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Code Generator</title>
+    <title>DashCord - QR Code Generator</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         * {
@@ -31,11 +31,57 @@
             padding: 40px;
         }
 
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 30px;
+            gap: 15px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .logo-icon {
+            width: 70px;
+            height: 70px;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .logo-icon svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        }
+
+        .logo-text {
+            font-size: 36px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8a 40%, #4a7ba7 60%, #ff8c42 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -1px;
+            position: relative;
+            text-transform: none;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        .logo-underline {
+            height: 4px;
+            background: linear-gradient(90deg, #ff8c42, #ff6b1a);
+            width: 100px;
+            margin: 2px 0 0 0;
+            border-radius: 2px;
+            box-shadow: 0 2px 4px rgba(255, 140, 66, 0.3);
+        }
+
         h1 {
             color: #333;
-            font-size: 32px;
+            font-size: 28px;
             margin-bottom: 12px;
             text-align: center;
+            margin-top: 20px;
         }
 
         .description {
@@ -240,6 +286,25 @@
                 padding: 24px;
             }
 
+            .logo-container {
+                flex-direction: column;
+                gap: 10px;
+                margin-bottom: 20px;
+            }
+
+            .logo-icon {
+                width: 50px;
+                height: 50px;
+            }
+
+            .logo-text {
+                font-size: 28px;
+            }
+
+            .logo-underline {
+                width: 80px;
+            }
+
             h1 {
                 font-size: 24px;
             }
@@ -257,6 +322,56 @@
 </head>
 <body>
     <div class="container">
+        <div class="logo-container">
+            <div class="logo-icon">
+                <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="dGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#1e3a5f;stop-opacity:1" />
+                            <stop offset="30%" style="stop-color:#2d5a8a;stop-opacity:1" />
+                            <stop offset="70%" style="stop-color:#4a7ba7;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#ff8c42;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="wingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#1e3a5f;stop-opacity:1" />
+                            <stop offset="50%" style="stop-color:#2d5a8a;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#4a7ba7;stop-opacity:1" />
+                        </linearGradient>
+                        <filter id="shadow">
+                            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.2"/>
+                        </filter>
+                    </defs>
+                    <!-- Wing shape (behind D) -->
+                    <path d="M 25 60 Q 15 50 8 40 Q 3 32 8 25 Q 12 18 25 25 L 25 30 Q 15 28 10 32 Q 8 35 10 38 Q 12 42 18 45" 
+                          fill="url(#wingGradient)" 
+                          stroke="#1e3a5f" 
+                          stroke-width="2"
+                          filter="url(#shadow)"/>
+                    <!-- D Shape outline -->
+                    <path d="M 25 25 L 25 95 L 60 95 Q 85 95 85 60 Q 85 25 60 25 Z" 
+                          fill="url(#dGradient)" 
+                          stroke="#1e3a5f" 
+                          stroke-width="2.5"
+                          filter="url(#shadow)"/>
+                    <!-- Arrow inside D -->
+                    <path d="M 40 60 L 70 60 M 65 55 L 70 60 L 65 65" 
+                          stroke="#ff8c42" 
+                          stroke-width="4" 
+                          stroke-linecap="round" 
+                          stroke-linejoin="round" 
+                          fill="none"/>
+                    <!-- Chain links/beads at bottom of wing -->
+                    <circle cx="15" cy="30" r="2.5" fill="#4a7ba7" opacity="0.9"/>
+                    <circle cx="18" cy="35" r="2.5" fill="#4a7ba7" opacity="0.9"/>
+                    <circle cx="15" cy="40" r="2.5" fill="#4a7ba7" opacity="0.9"/>
+                    <circle cx="12" cy="35" r="2" fill="#2d5a8a" opacity="0.7"/>
+                </svg>
+            </div>
+            <div>
+                <div class="logo-text">DashCord</div>
+                <div class="logo-underline"></div>
+            </div>
+        </div>
         <h1>QR Code Generator</h1>
         <p class="description">Fill in the fields below, then tap Done to generate a QR code.</p>
 
