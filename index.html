@@ -39,6 +39,26 @@
             gap: 15px;
             padding-bottom: 20px;
             border-bottom: 2px solid #f0f0f0;
+            position: relative;
+        }
+
+        .admin-link {
+            position: absolute;
+            left: 0;
+            top: 0;
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .admin-link:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
         }
 
         .logo-icon {
@@ -339,6 +359,7 @@
 <body>
     <div class="container">
         <div class="logo-container">
+            <a href="admin.html" class="admin-link">لوحة التحكم</a>
             <div class="logo-icon">
                 <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
                     <defs>
@@ -392,6 +413,12 @@
         <p class="description">Fill in the fields below, then tap Done to generate a QR code.</p>
 
         <div class="success-message" id="successMessage">Your QR code is ready.</div>
+        <div class="pending-message" id="pendingMessage" style="background: #fff3cd; color: #856404; padding: 12px 16px; border-radius: 8px; margin-bottom: 24px; display: none; text-align: center; font-weight: 500;">
+            تم إرسال طلبك بنجاح. في انتظار موافقة الإدمن...
+        </div>
+        <div class="rejected-message" id="rejectedMessage" style="background: #f8d7da; color: #721c24; padding: 12px 16px; border-radius: 8px; margin-bottom: 24px; display: none; text-align: center; font-weight: 500;">
+            تم رفض طلبك من قبل الإدمن.
+        </div>
 
         <form id="qrForm">
             <div class="form-group">
@@ -520,21 +547,103 @@
             // Store the data for copying
             currentQrData = combinedData;
 
-            // Clear previous QR code
+            // Clear previous QR code and messages
             qrContainer.innerHTML = '';
             qrCodeInstance = null;
+            successMessage.classList.remove('show');
+            document.getElementById('pendingMessage').classList.remove('show');
+            document.getElementById('rejectedMessage').classList.remove('show');
+            qrSection.classList.remove('show');
 
-            // Wait for library to be ready, then generate QR code
-            waitForQRCode(function() {
-                console.log('QRCode library is ready, starting generation...');
-                console.log('Data to encode:', combinedData);
-                console.log('Data length:', combinedData.length);
+            // Create approval request
+            const requestId = 'req_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            const request = {
+                id: requestId,
+                title: title,
+                urlOrData: urlOrData,
+                note: note,
+                custody: custody,
+                financialManagerExpectation: financialManagerExpectation,
+                combinedData: combinedData,
+                status: 'pending',
+                timestamp: new Date().toISOString()
+            };
+
+            // Save request to localStorage
+            const requests = JSON.parse(localStorage.getItem('qrRequests') || '[]');
+            requests.push(request);
+            localStorage.setItem('qrRequests', JSON.stringify(requests));
+
+            // Show pending message
+            document.getElementById('pendingMessage').classList.add('show');
+            qrSection.classList.add('show');
+
+            // Scroll to message
+            setTimeout(() => {
+                qrSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100);
+
+            // Start checking for approval
+            checkRequestStatus(requestId);
+        }
+
+        // Check request status periodically
+        function checkRequestStatus(requestId) {
+            const requests = JSON.parse(localStorage.getItem('qrRequests') || '[]');
+            const request = requests.find(r => r.id === requestId);
+
+            if (!request) {
+                console.error('Request not found');
+                return;
+            }
+
+            if (request.status === 'approved') {
+                // Hide pending message
+                document.getElementById('pendingMessage').classList.remove('show');
                 
-                // Generate QR code with simple settings
-                generateQRCode(combinedData, qrContainer, successMessage, qrSection);
-            });
+                // Generate QR code
+                waitForQRCode(function() {
+                    generateQRCode(request.combinedData, document.getElementById('qrcode'), 
+                        document.getElementById('successMessage'), document.getElementById('qrSection'));
+                });
+            } else if (request.status === 'rejected') {
+                // Hide pending message, show rejected message
+                document.getElementById('pendingMessage').classList.remove('show');
+                document.getElementById('rejectedMessage').classList.add('show');
+            } else {
+                // Still pending, check again in 2 seconds
+                setTimeout(() => checkRequestStatus(requestId), 2000);
+            }
+        }
 
-            function generateQRCode(data, container, successMsg, qrSect) {
+        // Check for any pending requests on page load
+        function checkPendingRequests() {
+            const requests = JSON.parse(localStorage.getItem('qrRequests') || '[]');
+            const pendingRequest = requests
+                .filter(r => r.status === 'pending')
+                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
+
+            if (pendingRequest) {
+                document.getElementById('pendingMessage').classList.add('show');
+                document.getElementById('qrSection').classList.add('show');
+                checkRequestStatus(pendingRequest.id);
+            }
+
+            // Check for approved request that should show QR code
+            const approvedRequest = requests
+                .filter(r => r.status === 'approved')
+                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
+
+            if (approvedRequest && !qrCodeInstance) {
+                currentQrData = approvedRequest.combinedData;
+                waitForQRCode(function() {
+                    generateQRCode(approvedRequest.combinedData, document.getElementById('qrcode'), 
+                        document.getElementById('successMessage'), document.getElementById('qrSection'));
+                });
+            }
+        }
+
+        function generateQRCode(data, container, successMsg, qrSect) {
                 try {
                     // Clear container
                     container.innerHTML = '';
@@ -542,27 +651,56 @@
                     console.log('Generating QR code - Data Length:', data.length);
                     
                     // Use qrcode-generator library
-                    // TypeNumber 0 = auto-detect, 'L' = lowest error correction for max capacity
-                    var qr = qrcode(0, 'L');
+                    // TypeNumber 0 = auto-detect, 'M' = medium error correction (balance between capacity and reliability)
+                    var qr = qrcode(0, 'M');
                     qr.addData(data, 'Byte'); // Use Byte mode for UTF-8 support
                     qr.make();
                     
-                    // Create image element
-                    var imgTag = qr.createImgTag(8, 16); // cellSize=8, margin=16 pixels
-                    container.innerHTML = imgTag;
+                    // Create canvas for better quality and scanning
+                    var cellSize = 12; // Larger cell size for better scanning (increased from 10)
+                    var margin = 4; // Margin in cells
+                    var size = qr.getModuleCount();
+                    var canvas = document.createElement('canvas');
+                    var ctx = canvas.getContext('2d');
                     
-                    // Style the generated image
-                    var img = container.querySelector('img');
-                    if (img) {
-                        img.style.display = 'block';
-                        img.style.margin = '0 auto';
-                        img.style.maxWidth = '100%';
-                        img.style.height = 'auto';
-                        img.style.imageRendering = 'pixelated';
-                        img.alt = 'QR Code';
+                    // Calculate canvas size
+                    var qrSize = (size + margin * 2) * cellSize;
+                    canvas.width = qrSize;
+                    canvas.height = qrSize;
+                    
+                    // Fill white background
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, qrSize, qrSize);
+                    
+                    // Draw QR code with anti-aliasing disabled for crisp edges
+                    ctx.fillStyle = '#000000';
+                    ctx.imageSmoothingEnabled = false; // Disable anti-aliasing for sharp edges
+                    for (var row = 0; row < size; row++) {
+                        for (var col = 0; col < size; col++) {
+                            if (qr.isDark(row, col)) {
+                                ctx.fillRect(
+                                    (col + margin) * cellSize,
+                                    (row + margin) * cellSize,
+                                    cellSize,
+                                    cellSize
+                                );
+                            }
+                        }
                     }
                     
-                    console.log('QR code generated successfully!');
+                    // Add canvas to container
+                    container.appendChild(canvas);
+                    
+                    // Style the canvas for optimal scanning
+                    canvas.style.display = 'block';
+                    canvas.style.margin = '0 auto';
+                    canvas.style.border = '25px solid white'; // Larger white border for better scanning
+                    canvas.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                    canvas.style.imageRendering = 'crisp-edges'; // Crisp edges for better scanning
+                    canvas.style.maxWidth = '100%';
+                    canvas.style.height = 'auto';
+                    
+                    console.log('QR code generated successfully! Size:', qrSize, 'x', qrSize);
                     qrCodeInstance = qr;
                     
                     // Show success message and QR section
@@ -589,6 +727,8 @@
             document.getElementById('urlError').classList.remove('show');
             document.getElementById('custodyError').classList.remove('show');
             document.getElementById('successMessage').classList.remove('show');
+            document.getElementById('pendingMessage').classList.remove('show');
+            document.getElementById('rejectedMessage').classList.remove('show');
             document.getElementById('qrSection').classList.remove('show');
             document.getElementById('qrcode').innerHTML = '';
             currentQrData = '';
@@ -669,6 +809,9 @@
             document.getElementById('clearBtn').addEventListener('click', clearFormAndQr);
             document.getElementById('downloadBtn').addEventListener('click', downloadQrImage);
             document.getElementById('copyBtn').addEventListener('click', copyQrData);
+
+            // Check for pending requests on page load
+            checkPendingRequests();
         });
     </script>
 </body>
